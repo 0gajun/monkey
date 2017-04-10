@@ -9,6 +9,43 @@ import (
 	"github.com/0gajun/monkey/lexer"
 )
 
+func TestReturnStatements(t *testing.T) {
+	input := `
+		return 5;
+		return 10;
+		return 993322;
+	`
+	inputStatementCount := 3
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if program == nil {
+		t.Fatalf("ParseProgram returned nil")
+	}
+
+	if len(program.Statements) != inputStatementCount {
+		t.Fatalf("program.Statements doesn't contain %d statements. got = %d", len(program.Statements))
+	}
+
+	for _, stmt := range program.Statements {
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
+
+		if !ok {
+			t.Errorf("stmt is not *ast.ReturnStatement. got = %s", stmt)
+			continue
+		}
+
+		if returnStmt.TokenLiteral() != "return" {
+			t.Errorf("returnStmt.TokenLiteral() not 'return', got = %q", returnStmt.TokenLiteral())
+		}
+	}
+
+}
+
 func TestLetStatements(t *testing.T) {
 	input := `
 	let x = 5;
