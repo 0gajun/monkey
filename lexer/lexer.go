@@ -135,3 +135,7 @@ func isDigit(ch byte) bool {
 func isWhitespace(ch byte) bool {
 	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
 }
+
+func (l *Lexer) Input() string {
+	return l.input
+}
