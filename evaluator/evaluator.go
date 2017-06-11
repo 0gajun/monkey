@@ -3,6 +3,7 @@
 package evaluator
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/0gajun/monkey/ast"
@@ -67,7 +68,24 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalIfExpression(node, env)
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
+	case *ast.FunctionLiteral:
+		params := node.Parameters
+		body := node.Body
+		return &object.Function{Parameters: params, Body: body, Env: env}
+	case *ast.CallExpression:
+		function := Eval(node.Function, env)
+		if isError(function) {
+			return function
+		}
+
+		args := evalExpressions(node.Arguments, env)
+		if len(args) == 1 && isError(args[0]) {
+			return args[0]
+		}
+
+		return applyFunction(function, args)
 	}
+
 	return nil
 }
 
@@ -222,6 +240,59 @@ func evalIdentifier(ident *ast.Identifier, env *object.Environment) object.Objec
 		return newError("identifier not found: %s", ident.Value)
 	}
 	return val
+}
+
+func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
+	var result []object.Object
+
+	for _, exp := range exps {
+		evaluated := Eval(exp, env)
+		if isError(evaluated) {
+			return []object.Object{evaluated}
+		}
+		result = append(result, evaluated)
+	}
+
+	return result
+}
+
+func applyFunction(fn object.Object, args []object.Object) object.Object {
+	function, ok := fn.(*object.Function)
+
+	if !ok {
+		return newError("not a function: %s", fn.Type())
+	}
+
+	extendedEnv, err := extendedFunctionEnv(function, args)
+	if err != nil {
+		return newError(err.Error())
+	}
+	evaluated := Eval(function.Body, extendedEnv)
+	return unwrapReturnValueIfNeeded(evaluated)
+}
+
+func extendedFunctionEnv(fn *object.Function, args []object.Object) (*object.Environment, error) {
+	env := object.NewEnclosedEnviconment(fn.Env)
+
+	if len(fn.Parameters) != len(args) {
+		errMsg := fmt.Sprintf("invalid argument: got %d arguments. expected %d arguments",
+			len(args), len(fn.Parameters))
+		err := errors.New(errMsg)
+		return nil, err
+	}
+
+	for paramIdx, param := range args {
+		env.Set(fn.Parameters[paramIdx].Value, param)
+	}
+
+	return env, nil
+}
+
+func unwrapReturnValueIfNeeded(obj object.Object) object.Object {
+	if returnValue, ok := obj.(*object.ReturnValue); ok {
+		return returnValue.Value
+	}
+	return obj
 }
 
 func newError(format string, a ...interface{}) *object.Error {
