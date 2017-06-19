@@ -77,6 +77,14 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LBRACE, l.ch)
 	case '}':
 		tok = newToken(token.RBRACE, l.ch)
+	case '"':
+		lit, err := l.readString()
+		if err != nil {
+			tok = newToken(token.ILLEGAL, l.ch)
+		} else {
+			tok.Literal = lit
+			tok.Type = token.STRING
+		}
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -104,6 +112,55 @@ func (l *Lexer) readIdentifier() string {
 
 func (l *Lexer) readNumber() string {
 	return l.readWhile(isDigit)
+}
+
+type IllegalEscapedCharacterError byte
+
+func (e IllegalEscapedCharacterError) Error() string {
+	return "hogehoge"
+}
+
+func (l *Lexer) readString() (string, error) {
+	l.readChar()
+
+	var bytes = make([]byte, 0, 1000)
+
+	for l.ch != '"' {
+		var c byte
+		if l.ch == '\\' {
+			escapedChar, err := l.readEscapedCharacter()
+			if err != nil {
+				return "", err
+			}
+			c = escapedChar
+		} else {
+			c = l.ch
+		}
+
+		bytes = append(bytes, c)
+		l.readChar()
+	}
+
+	return string(bytes), nil
+}
+
+func (l *Lexer) readEscapedCharacter() (byte, error) {
+	l.readChar()
+
+	var char byte
+	switch l.ch {
+	case '"':
+		char = '"'
+	case 't':
+		char = '\t'
+	case 'n':
+		char = '\n'
+	case '\\':
+		char = '\\'
+	default:
+		return ' ', IllegalEscapedCharacterError(l.ch)
+	}
+	return char, nil
 }
 
 func (l *Lexer) readWhile(isContinue func(ch byte) bool) string {
