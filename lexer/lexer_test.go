@@ -30,7 +30,7 @@ func TestNextToken(t *testing.T) {
 	10 != 9;
 	"foobar"
 	"foo bar"
-	"hello \"world\""
+	"hello \"world!\""
 	"hello\t\tworld\n",
 	`
 
@@ -113,7 +113,7 @@ func TestNextToken(t *testing.T) {
 		{token.SEMICOLON, ";"},
 		{token.STRING, "foobar"},
 		{token.STRING, "foo bar"},
-		{token.STRING, "hello \"world\""},
+		{token.STRING, "hello \"world!\""},
 		{token.STRING, "hello\t\tworld\n"},
 	}
 
