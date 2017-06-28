@@ -83,7 +83,56 @@ func TestStringLiteral(t *testing.T) {
 	if str.Value != "Hello world!" {
 		t.Fatalf("str.Value is not \"Hello world!\". got=%q", str.Value)
 	}
+}
 
+func TestStringConcatenation(t *testing.T) {
+	input := `"Hello" + " " + "World!"`
+
+	evaluated := testEval(input)
+	str, ok := evaluated.(*object.String)
+	if !ok {
+		t.Fatalf("object is not String. got=%T(%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "Hello World!" {
+		t.Fatalf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestStringEquality(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{
+			`"Hello World!" == "Hello World!"`,
+			true,
+		},
+		{
+			`"Hello World!" == "Foo bar"`,
+			false,
+		},
+		{
+			`"Hello World!" != "Hello World!"`,
+			false,
+		},
+		{
+			`"Hello World!" != "Foo bar"`,
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		result, ok := evaluated.(*object.Boolean)
+		if !ok {
+			t.Fatalf("object is not Boolean. got=%T(%+v)", evaluated, evaluated)
+		}
+
+		if result.Value != tt.expected {
+			t.Fatalf("Result has wrong value. got=%t", result.Value)
+		}
+	}
 }
 
 func TestIfElseExpression(t *testing.T) {
@@ -191,6 +240,10 @@ func TestErrorHandling(t *testing.T) {
 		{
 			"5; true + false; 5",
 			"unknown operator: BOOLEAN + BOOLEAN",
+		},
+		{
+			`"Hello" - "World"`,
+			"unknown operator: STRING - STRING",
 		},
 		{
 			"if (10 > 1) { true + false; }",
